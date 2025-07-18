@@ -9,7 +9,6 @@ from selenium.webdriver.support import expected_conditions as EC
 # Amazon search URL
 # url = "https://www.amazon.in/s?k=frozen-nuts-premium-mewa-mix-almonds-cashews-kiwi-walnuts-apricots-dates-blueberry-assorted-fruits"
 def find_similar_items(url):
-    # Setup Chrome options
     chrome_options = Options()
     # chrome_options.add_argument('--headless')  # Run in headless mode
     # chrome_options.add_argument('--no-sandbox')
@@ -23,34 +22,29 @@ def find_similar_items(url):
 
     # Wait for elements to load
     wait = WebDriverWait(driver, 10)
-    wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "img.s-image")))
-    wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a.a-link-normal.s-line-clamp-3.s-link-style.a-text-normal")))
-    wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "span.a-price-whole")))
-    
-    # Find image elements
-    images = driver.find_elements(By.CSS_SELECTOR, "img.s-image")
+    xpath = '//div[contains(@class, "puis-card-container")]'
+    wait.until(EC.presence_of_all_elements_located((By.XPATH, xpath)))
 
-    # Find title and link elements
-    title_links = driver.find_elements(By.CSS_SELECTOR, "a.a-link-normal.s-line-clamp-3.s-link-style.a-text-normal")
+    images = driver.find_elements(By.XPATH, '//div[contains(@class, "puis-card-container")]//img')
+    titles = driver.find_elements(By.XPATH, '//div[contains(@class, "puis-card-container")]//a//h2//span')
+    prices = driver.find_elements(By.XPATH, '//div[contains(@class, "puis-card-container")]//span[@class="a-price-whole"]')
+    links = driver.find_elements(By.XPATH, '//div[contains(@class, "puis-card-container")]//a')
 
-
-    price_tags = driver.find_elements(By.CSS_SELECTOR, "span.a-price-whole")
-    # Collect results
-    print(price_tags)
+    min_length = min(len(ls) for ls in (images, titles, prices, links))
     results = []
-    minlen = min([len(i) for i in [images, title_links, price_tags]])
-    item_range = 3 if minlen > 3 else minlen
-    for i in range(item_range):
+    for i in range(min(3, min_length)):
         img_src = images[i].get_attribute('src')
-        title_element = title_links[i]
-        title_text = title_element.text
-        href = title_element.get_attribute('href')
-        full_url = "https://www.amazon.in" + href if href.startswith('/') else href
-        price = price_tags[i].text
+        title = titles[i].text
+        price = prices[i].text
+        link = links[i].get_attribute('href')
+
+        # weird bug: some links are 'javascript:void(0)'
+        if not link.startswith('https://'):
+            continue
 
         results.append({
-            "title": title_text,
-            "url": full_url,
+            "title": title,
+            "url": link,
             "image": img_src,
             "price": price,
         })
@@ -62,7 +56,7 @@ def find_similar_items(url):
         print("Image:", item['image'])
         print("Price:" , item["price"])
         print("----")
-    
+
     return results
 
     # Close the driver
