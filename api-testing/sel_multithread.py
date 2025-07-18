@@ -145,22 +145,22 @@ def scrape_pages_range(base_url, start_page, end_page, thread_id, max_empty_page
                         page_reviews_count += 1
                 
                 except Exception as e:
-                    # print(f"Thread {thread_id}: Error parsing review on page {page}: {e}")
+                    print(f"Thread {thread_id}: Error parsing review on page {page}: {e}")
                     continue
             
             # Check if this page had any actual reviews
             if page_reviews_count == 0:
                 consecutive_empty_pages += 1
-                # print(f"Thread {thread_id}: Page {page} had no valid reviews (empty page {consecutive_empty_pages})")
+                print(f"Thread {thread_id}: Page {page} had no valid reviews (empty page {consecutive_empty_pages})")
                 
                 # If we hit too many empty pages in a row, stop scraping
                 if consecutive_empty_pages >= max_empty_pages:
-                    # print(f"Thread {thread_id}: Found {consecutive_empty_pages} consecutive empty pages, stopping early at page {page}")
+                    print(f"Thread {thread_id}: Found {consecutive_empty_pages} consecutive empty pages, stopping early at page {page}")
                     break
             else:
                 # Reset counter if we found reviews
                 consecutive_empty_pages = 0
-                # print(f"Thread {thread_id}: Completed page {page}, found {page_reviews_count} reviews")
+                print(f"Thread {thread_id}: Completed page {page}, found {page_reviews_count} reviews")
             
     except Exception as e:
         print(f"Thread {thread_id}: Error in scraping: {e}")
@@ -198,7 +198,7 @@ def scrape_all_reviews_threaded(base_url, num_threads=12, max_empty_pages=1):
     try:
         driver.get(base_url)
         total_pages = get_total_pages(driver)
-        # print(f"Found {total_pages} pages total.")
+        print(f"Found {total_pages} pages total.")
     finally:
         driver.quit()
     
@@ -208,7 +208,7 @@ def scrape_all_reviews_threaded(base_url, num_threads=12, max_empty_pages=1):
     
     # Distribute pages among threads
     page_ranges = distribute_pages(total_pages, num_threads)
-    # print(f"Page distribution: {page_ranges}")
+    print(f"Page distribution: {page_ranges}")
     
     # Create thread pool and scrape in parallel
     all_reviews = []
@@ -237,11 +237,11 @@ def scrape_all_reviews_threaded(base_url, num_threads=12, max_empty_pages=1):
         review.pop('thread_id', None)
     
     print(f"Scraped {len(all_reviews)}")
-    return all_reviews
+    return all_reviews, len(all_reviews)
 
 
 def rank_reviews_by_score(url, top_n=250, max_votes=10):
-    reviews = scrape_all_reviews_threaded(url)
+    reviews, num_reviews = scrape_all_reviews_threaded(url)
 
     def get_total_ldr(reviews):
         likes = 0
@@ -279,6 +279,7 @@ def rank_reviews_by_score(url, top_n=250, max_votes=10):
         )
         return round(final_score, 4)
 
+
     # Step 1: compute total LDR for alignment
     total_ldr = get_total_ldr(reviews)
 
@@ -288,7 +289,7 @@ def rank_reviews_by_score(url, top_n=250, max_votes=10):
 
     # Step 3: sort and return top N
     reviews_sorted = sorted(reviews, key=lambda r: r["score"], reverse=True)
-    return reviews_sorted[:top_n]
+    return reviews_sorted[:top_n], num_reviews
 
         
 
@@ -299,7 +300,9 @@ if __name__ == "__main__":
         # "https://www.flipkart.com/tripr-solid-men-mandarin-collar-dark-green-black-t-shirt/product-reviews/itm6c3c93e8e1be1?pid=TSHGZ29HZ45PKUFA&lid=LSTTSHGZ29HZ45PKUFAT38BP8&marketplace=FLIPKART",
         # "https://www.flipkart.com/realme-p3-5g-space-silver-128-gb/product-reviews/itm69060f73d27e8?pid=MOBHAYN5SGFFG88U&lid=LSTMOBHAYN5SGFFG88UIOKMGU&marketplace=FLIPKART",
         # "https://www.flipkart.com/motorola-g45-5g-viva-magenta-128-gb/product-reviews/itmab7651d40eb72?pid=MOBH3YKQMPVFBUB5&lid=LSTMOBH3YKQMPVFBUB5BQUMDM&marketplace=FLIPKART",
-        "https://www.flipkart.com/samsung-galaxy-f06-5g-bahama-blue-128-gb/product-reviews/itm58189fada62cb?pid=MOBH9AS47XHFRMJY&lid=LSTMOBH9AS47XHFRMJYWI8CRI&marketplace=FLIPKART",
+        # "https://www.flipkart.com/samsung-galaxy-f06-5g-bahama-blue-128-gb/product-reviews/itm58189fada62cb?pid=MOBH9AS47XHFRMJY&lid=LSTMOBH9AS47XHFRMJYWI8CRI&marketplace=FLIPKART",
+        # "https://www.flipkart.com/frozen-nuts-premium-mewa-mix-almonds-cashews-kiwi-walnuts-apricots-dates-blueberry-assorted-fruits/product-reviews/itmb599a803d76cb?pid=NDFH9GZZKGEQV8YK&lid=LSTNDFH9GZZKGEQV8YK24UYEG&marketplace=FLIPKART",
+        "https://www.flipkart.com/vellosta-men-self-design-casual-black-shirt/product-reviews/itm1d0ab280b3fc9?pid=SHTHCFXAJ5H4EHNG&lid=LSTSHTHCFXAJ5H4EHNGO67UAK&marketplace=FLIPKART",
     ]
     
     NUM_THREADS = 6
