@@ -3,13 +3,14 @@ import { browser } from "wxt/browser";
 
 const App = () => {
   const [responseText, setResponseText] = useState("");
-
+  const FLIPKART_URL =
+    "https://www.flipkart.com/noise-colorfit-icon-2-1-8-display-bluetooth-calling-ai-voice-assistant-smartwatch/product-reviews/itm9d8957f65c72e?pid=SMWGEH7WC8F4VKKZ&lid=LSTSMWGEH7WC8F4VKKZ6TOWMG&marketplace=FLIPKART";
   useEffect(() => {
     const handleMessage = async () => {
       try {
         const response = await browser.runtime.sendMessage({
-          action: "post-data",
-          data: { name: "Planes are cool" },
+          action: "analyse-data",
+          data: { name: FLIPKART_URL },
         });
 
         console.log("Response from background script:", response);
@@ -31,7 +32,7 @@ const App = () => {
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center text-sm font-bold">
-      {responseText}
+      {JSON.stringify(responseText, null, 2)}
     </div>
   );
 };

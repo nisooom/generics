@@ -36,31 +36,53 @@ function isFlipkartDomain(url) {
   }
 }
 
+// New function to hit /analyse endpoint
+async function analyseData(data) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/analyse`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    console.log("Analyse response data:", responseData);
+    return responseData;
+  } catch (error) {
+    console.error("Failed to analyse data:", error);
+    throw error;
+  }
+}
+
 export default defineBackground(() => {
   browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "post-data") {
       (async () => {
         try {
-          if (!sender.tab || !sender.tab.url) {
-            sendResponse({
-              success: false,
-              error: "No sender tab information available",
-            });
-            return;
-          }
-
-          if (!isFlipkartDomain(sender.tab.url)) {
-            sendResponse({
-              success: false,
-              error: "API calls are only allowed on Flipkart domains",
-            });
-            return;
-          }
-
           const responseData = await postData(
             `${API_BASE_URL}/say_hello`,
             message.data,
           );
+          sendResponse({ success: true, data: responseData });
+        } catch (error) {
+          console.log(error);
+          sendResponse({ success: false, error: error.message });
+        }
+      })();
+      return true;
+    }
+
+    // Handle /analyse endpoint
+    if (message.action === "analyse-data") {
+      (async () => {
+        try {
+          const responseData = await analyseData(message.data);
           sendResponse({ success: true, data: responseData });
         } catch (error) {
           console.log(error);
