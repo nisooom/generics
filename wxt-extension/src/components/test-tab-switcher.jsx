@@ -295,8 +295,41 @@ const TestTabSwitcher = ({ originalContent }) => {
         )}
 
         {activeTab === 2 && (
-          <div className="h-auto w-full" style={{ padding: "1rem" }}>
-            <h2 className="mb-4 text-xl font-bold">Top and Genuine Reviews</h2>
+          <div className="h-full w-full" style={{ padding: "1rem" }}>
+            <h2
+              className="mb-4 text-xl font-bold"
+              style={{ paddingBottom: "1rem" }}
+            >
+              Top 5 Recent Reviews
+            </h2>
+            {JSON.parse(apiData) &&
+            Array.isArray(JSON.parse(apiData).Reviews) ? (
+              JSON.parse(apiData)
+                .Reviews.slice(0, 5) // Get first 5 only, in original order (if more recent = first)
+                .map((reviewObj, idx) => (
+                  <div
+                    key={idx}
+                    className="border-muted mb-4 flex flex-col gap-4 rounded-md border p-4 shadow-sm"
+                    style={{
+                      padding: "1rem",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    <div className="mb-1 flex items-center gap-4" style={{}}>
+                      <span className="font-bold">★ {reviewObj.rating}/5</span>
+                      <span className="text-sm text-gray-700">
+                        {reviewObj.user}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {reviewObj.time}
+                      </span>
+                    </div>
+                    <div>{reviewObj.review}</div>
+                  </div>
+                ))
+            ) : (
+              <div>No reviews found.</div>
+            )}
           </div>
         )}
       </div>
