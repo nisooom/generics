@@ -16,7 +16,7 @@ def setup_driver():
     chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36")
     chrome_options.add_argument("--accept-language=en-US,en;q=0.9")
     # Uncomment the line below if you want to run in headless mode
-    chrome_options.add_argument("--headless")
+    # chrome_options.add_argument("--headless")
     
     driver = webdriver.Chrome(options=chrome_options)
     return driver
@@ -25,13 +25,13 @@ def clean_text(text):
     # Remove emojis
     text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
     text = re.sub(r'\s+', ' ', text.strip())
-    return text.replace("READ MORE", "").strip()[1:]
+    return text.replace("READ MORE", "").strip()
 
 def get_total_pages(driver):
     """Get total number of pages from pagination"""
     try:
         # Wait for pagination to load
-        wait = WebDriverWait(driver, 1)
+        wait = WebDriverWait(driver, 5)
         page_divs = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div._1G0WLw.mpIySA")))
         
         for page_div in page_divs:
@@ -63,7 +63,7 @@ def scrape_pages_range(base_url, start_page, end_page, thread_id, max_empty_page
             driver.get(paged_url)
             
             # Wait for page to load
-            wait = WebDriverWait(driver, 0.2)
+            wait = WebDriverWait(driver, 2)
             
             # Check if page has reviews
             try:
@@ -168,7 +168,6 @@ def scrape_pages_range(base_url, start_page, end_page, thread_id, max_empty_page
     finally:
         driver.quit()
     
-    # print(f"Thread {thread_id}: Completed scraping {len(thread_reviews)} reviews from pages {start_page}-{end_page}")
     return thread_reviews
 
 def distribute_pages(total_pages, num_threads=4):
@@ -193,8 +192,7 @@ def distribute_pages(total_pages, num_threads=4):
     
     return page_ranges
 
-def scrape_all_reviews_threaded(base_url, num_threads=8, max_empty_pages=1):
-    """Scrape all reviews using multiple threads"""
+def scrape_all_reviews_threaded(base_url, num_threads=12, max_empty_pages=1):
     # First, get total pages using a single driver
     driver = setup_driver()
     try:
@@ -228,7 +226,7 @@ def scrape_all_reviews_threaded(base_url, num_threads=8, max_empty_pages=1):
             try:
                 thread_reviews = future.result()
                 all_reviews.extend(thread_reviews)
-                # print(f"Thread {thread_id} completed successfully with {len(thread_reviews)} reviews")
+                print(f"Thread {thread_id} completed successfully with {len(thread_reviews)} reviews")
             except Exception as e:
                 print(f"Thread {thread_id} generated an exception: {e}")
     
@@ -238,11 +236,12 @@ def scrape_all_reviews_threaded(base_url, num_threads=8, max_empty_pages=1):
         review.pop('page', None)
         review.pop('thread_id', None)
     
+    print(f"Scraped {len(all_reviews)}")
     return all_reviews
 
 
-def rank_reviews_by_score(url, top_n=10, max_votes=10):
-    reviews = scrape_all_reviews_threaded(url, num_threads=12)
+def rank_reviews_by_score(url, top_n=250, max_votes=10):
+    reviews = scrape_all_reviews_threaded(url)
 
     def get_total_ldr(reviews):
         likes = 0
@@ -297,9 +296,10 @@ if __name__ == "__main__":
 
 
     review_page_url = [
-        "https://www.flipkart.com/tripr-solid-men-mandarin-collar-dark-green-black-t-shirt/product-reviews/itm6c3c93e8e1be1?pid=TSHGZ29HZ45PKUFA&lid=LSTTSHGZ29HZ45PKUFAT38BP8&marketplace=FLIPKART",
+        # "https://www.flipkart.com/tripr-solid-men-mandarin-collar-dark-green-black-t-shirt/product-reviews/itm6c3c93e8e1be1?pid=TSHGZ29HZ45PKUFA&lid=LSTTSHGZ29HZ45PKUFAT38BP8&marketplace=FLIPKART",
         # "https://www.flipkart.com/realme-p3-5g-space-silver-128-gb/product-reviews/itm69060f73d27e8?pid=MOBHAYN5SGFFG88U&lid=LSTMOBHAYN5SGFFG88UIOKMGU&marketplace=FLIPKART",
         # "https://www.flipkart.com/motorola-g45-5g-viva-magenta-128-gb/product-reviews/itmab7651d40eb72?pid=MOBH3YKQMPVFBUB5&lid=LSTMOBH3YKQMPVFBUB5BQUMDM&marketplace=FLIPKART",
+        "https://www.flipkart.com/samsung-galaxy-f06-5g-bahama-blue-128-gb/product-reviews/itm58189fada62cb?pid=MOBH9AS47XHFRMJY&lid=LSTMOBH9AS47XHFRMJYWI8CRI&marketplace=FLIPKART",
     ]
     
     NUM_THREADS = 6
@@ -315,7 +315,7 @@ if __name__ == "__main__":
         
         end_time = time.time()
         
-        file_name = f"./api-testing/flipkart_detailed_reviews.json"
+        file_name = f"flipkart_detailed_reviews.json"
         cnt += 1
 
         # Save to JSON file
