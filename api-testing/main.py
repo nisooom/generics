@@ -12,9 +12,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-# Add this block to allow all CORS (insecure, for development only!)
-
-
 class NameRequest(BaseModel):
     name: str
 
@@ -90,7 +87,7 @@ def infer_llm(reviews):
 You are given a list of user reviews. Read them all carefully and generate a concise, balanced summary that captures the overall sentiment, common themes, notable pros and cons, and any frequently mentioned issues or praises. Use clear language and aim to reflect the general consensus as well as any strong outliers.
 Reviews: {reviews}
 """,
-        "n_predict": 128
+        "n_predict": 196
     }
 
     response = requests.post(llm_url, headers=headers, json=data)
