@@ -1,6 +1,9 @@
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
+import nltk
+nltk.download("punkt", download_dir="nltk-tokenizers")
+nltk.download("punkt_tab", download_dir="nltk-tokenizers")
 from nltk.tokenize import word_tokenize
 import json
 
