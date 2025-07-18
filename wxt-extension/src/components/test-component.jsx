@@ -96,7 +96,10 @@ export default function TestComponent({
   // Loading state component
   if (loading) {
     return (
-      <div className="flex h-auto w-full flex-col items-center justify-center gap-4 p-8">
+      <div
+        className="flex h-auto w-full flex-col items-center justify-start gap-4"
+        style={{ padding: "2rem" }}
+      >
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
           <div className="text-center">
@@ -176,7 +179,7 @@ export default function TestComponent({
           )}
         </div>
         <div
-          className="flex -translate-x-4 flex-col"
+          className="flex -translate-x-4 flex-col gap-1"
           style={{
             paddingLeft: "0rem",
             paddingTop: "1rem",
@@ -227,9 +230,30 @@ export default function TestComponent({
             </>
           )}
 
-          {apiData && apiData.ReviewsScraped && (
-            <p>{apiData.ReviewsScraped} quality reviews scraped</p>
-          )}
+          <div className="flex h-auto items-center gap-4">
+            {apiData && apiData.ReviewsScraped && (
+              <p
+                className="bg-primary/25"
+                style={{
+                  padding: "0.25rem 0.5rem",
+                  borderRadius: "0.25rem",
+                }}
+              >
+                {apiData.ReviewsScraped} quality reviews scraped
+              </p>
+            )}
+            {apiData && apiData.FakeRatio && (
+              <p
+                className="bg-primary/25"
+                style={{
+                  padding: "0.25rem 0.5rem",
+                  borderRadius: "0.25rem",
+                }}
+              >
+                {apiData.FakeRatio * 100}% AI review possibility
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -267,6 +291,11 @@ export default function TestComponent({
                 className="group max-w-[200px] min-w-[200px] flex-shrink-0 cursor-pointer rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-all duration-200 hover:shadow-lg"
               >
                 {/* Image Container */}
+                <img
+                  src="https://techdocs.akamai.com/identity-cloud/img/social-login/identity-providers/amazon-logo.png"
+                  alt=""
+                  className="absolute h-8 w-8"
+                />
                 <div className="mb-3 flex h-40 items-center justify-center overflow-hidden rounded-md bg-gray-50">
                   {item.image ? (
                     <img
