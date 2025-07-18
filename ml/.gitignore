@@ -2,5 +2,8 @@
 reviews-dataset/*
 !reviews-dataset/.gitkeep
 
+fake-reviews-dataset/*
+!fake-reviews-dataset/.gitkeep
+
 nltk-tokenizers/*
 !nltk-tokenizers/.gitkeep
