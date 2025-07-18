@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+:root,
+html,
+body,
+#root {
+  height: 100%;
+}
+#root {
+  @apply w-32 h-32;
+}
