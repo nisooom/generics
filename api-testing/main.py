@@ -51,7 +51,6 @@ async def say_hello(request: NameRequest):
     return {"message": f"Hello, {request.name}!"}
 
 
-
 @app.post("/analyse/")
 def analyze(url):
     start = time.time()
