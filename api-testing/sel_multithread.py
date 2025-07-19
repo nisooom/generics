@@ -7,22 +7,19 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 import time
 import json
 import re
-import threading
 from concurrent.futures import ThreadPoolExecutor
-import math
 
 def setup_driver():
     chrome_options = Options()
     chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36")
     chrome_options.add_argument("--accept-language=en-US,en;q=0.9")
-    # Uncomment the line below if you want to run in headless mode
+
     # chrome_options.add_argument("--headless")
     
     driver = webdriver.Chrome(options=chrome_options)
     return driver
 
 def clean_text(text):
-    # Remove emojis
     text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
     text = re.sub(r'\s+', ' ', text.strip())
     return text.replace("READ MORE", "").strip()
@@ -53,16 +50,12 @@ def scrape_pages_range(base_url, start_page, end_page, thread_id, max_empty_page
     consecutive_empty_pages = 0
     
     try:
-        # print(f"Thread {thread_id}: Starting to scrape pages {start_page} to {end_page}")
         
         for page in range(start_page, end_page + 1):
-            # print(f"Thread {thread_id}: Scraping page {page}...")
             
-            # Navigate to specific page
             paged_url = f"{base_url}&page={page}"
             driver.get(paged_url)
             
-            # Wait for page to load
             wait = WebDriverWait(driver, 2)
             
             # Check if page has reviews
@@ -72,10 +65,9 @@ def scrape_pages_range(base_url, start_page, end_page, thread_id, max_empty_page
                 # print(f"Thread {thread_id}: No reviews found on page {page}")
                 consecutive_empty_pages += 1
                 
-                # If we hit too many empty pages in a row, stop scraping
                 if consecutive_empty_pages >= max_empty_pages:
-                    # print(f"Thread {thread_id}: Found {consecutive_empty_pages} consecutive empty pages, stopping early")
                     break
+
                 continue
             
             # Find all review containers
@@ -158,7 +150,6 @@ def scrape_pages_range(base_url, start_page, end_page, thread_id, max_empty_page
                     print(f"Thread {thread_id}: Found {consecutive_empty_pages} consecutive empty pages, stopping early at page {page}")
                     break
             else:
-                # Reset counter if we found reviews
                 consecutive_empty_pages = 0
                 print(f"Thread {thread_id}: Completed page {page}, found {page_reviews_count} reviews")
             
@@ -167,12 +158,12 @@ def scrape_pages_range(base_url, start_page, end_page, thread_id, max_empty_page
     
     finally:
         driver.quit()
-    
+
     return thread_reviews
+
 
 def distribute_pages(total_pages, num_threads=4):
     if total_pages <= num_threads:
-        # If we have fewer pages than threads, assign one page per thread
         return [(i, i) for i in range(1, total_pages + 1)]
     
     pages_per_thread = total_pages // num_threads
@@ -192,7 +183,8 @@ def distribute_pages(total_pages, num_threads=4):
     
     return page_ranges
 
-def scrape_all_reviews_threaded(base_url, num_threads=12, max_empty_pages=1):
+
+def scrape_all_reviews_threaded(base_url, num_threads=12, max_empty_pages=2):
     # First, get total pages using a single driver
     driver = setup_driver()
     try:
@@ -206,11 +198,9 @@ def scrape_all_reviews_threaded(base_url, num_threads=12, max_empty_pages=1):
         print("No pages found to scrape")
         return []
     
-    # Distribute pages among threads
     page_ranges = distribute_pages(total_pages, num_threads)
     print(f"Page distribution: {page_ranges}")
     
-    # Create thread pool and scrape in parallel
     all_reviews = []
     
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
@@ -280,18 +270,14 @@ def rank_reviews_by_score(url, top_n=250, max_votes=10):
         return round(final_score, 4)
 
 
-    # Step 1: compute total LDR for alignment
     total_ldr = get_total_ldr(reviews)
 
-    # Step 2: compute score for each review
     for review in reviews:
         review["score"] = score_review(review, total_ldr, max_votes=max_votes)
 
-    # Step 3: sort and return top N
     reviews_sorted = sorted(reviews, key=lambda r: r["score"], reverse=True)
     return reviews_sorted[:top_n], num_reviews
 
-        
 
 if __name__ == "__main__":
 
