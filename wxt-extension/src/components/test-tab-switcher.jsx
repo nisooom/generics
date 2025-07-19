@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import D3ScatterPlot from "./d3-scatter-plot";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ThumbsUp, ThumbsDown } from "lucide-react";
 import { browser } from "wxt/browser";
 import "../entrypoints/popup/style.css";
 import CircularProgress from "./circular-progress";
@@ -91,6 +91,34 @@ const TestTabSwitcher = ({ originalContent }) => {
     { id: 1, label: "Analysis", content: "custom2" },
     { id: 2, label: "Reviews", content: "custom3" },
   ];
+
+  const getScoreColor = (score) => {
+    if (score >= 0.8) return "text-green-600";
+    if (score >= 0.6) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  const getScoreBadgeColor = (score) => {
+    if (score >= 0.8) return "bg-green-100 text-green-800";
+    if (score >= 0.6) return "bg-yellow-100 text-yellow-800";
+    return "bg-red-100 text-red-800";
+  };
+
+  const renderStars = (rating) => {
+    const numRating = parseInt(rating);
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <span
+          key={i}
+          className={i <= numRating ? "text-yellow-400" : "text-gray-300"}
+        >
+          ★
+        </span>,
+      );
+    }
+    return stars;
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -183,7 +211,6 @@ const TestTabSwitcher = ({ originalContent }) => {
 
         {activeTab === 1 && (
           <>
-            {" "}
             <div className="flex h-full w-full flex-col items-start justify-start rounded-sm bg-green-400/0">
               <div className="flex w-full">
                 <div
@@ -272,7 +299,7 @@ const TestTabSwitcher = ({ originalContent }) => {
               </div>
 
               <div
-                className="bg-background border-muted flex h-auto w-full -translate-y-8 flex-col rounded-sm border"
+                className="border-muted flex h-auto w-full -translate-y-8 flex-col rounded-sm border"
                 style={{ padding: "0.5rem", marginBottom: "2rem" }}
               >
                 <section className="flex h-full w-full items-center justify-start gap-2 rounded-sm">
@@ -293,42 +320,90 @@ const TestTabSwitcher = ({ originalContent }) => {
             </div>
           </>
         )}
-
         {activeTab === 2 && (
           <div className="h-full w-full" style={{ padding: "1rem" }}>
-            <h2
-              className="mb-4 text-xl font-bold"
-              style={{ paddingBottom: "1rem" }}
-            >
-              Top 5 Recent Reviews
+            <h2 className="text-xl font-bold" style={{ marginBottom: "1rem" }}>
+              Top Reviews (Sorted by Quality Score)
             </h2>
             {JSON.parse(apiData) &&
             Array.isArray(JSON.parse(apiData).Reviews) ? (
               JSON.parse(apiData)
-                .Reviews.slice(0, 5) // Get first 5 only, in original order (if more recent = first)
+                .Reviews.sort((a, b) => b.final_score - a.final_score)
+                .slice(0, 5)
                 .map((reviewObj, idx) => (
                   <div
                     key={idx}
-                    className="border-muted mb-4 flex flex-col gap-4 rounded-md border p-4 shadow-sm"
+                    className="rounded-lg border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md"
                     style={{
+                      marginBottom: "0.75rem",
                       padding: "1rem",
-                      marginBottom: "0.5rem",
                     }}
                   >
-                    <div className="mb-1 flex items-center gap-4" style={{}}>
-                      <span className="font-bold">★ {reviewObj.rating}/5</span>
-                      <span className="text-sm text-gray-700">
-                        {reviewObj.user}
+                    {/* Header */}
+                    <div
+                      className="flex items-center justify-between"
+                      style={{ marginBottom: "0.5rem" }}
+                    >
+                      <div className="flex items-center gap-1">
+                        {renderStars(reviewObj.rating)}
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-gray-600">
+                          {reviewObj.user}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {reviewObj.time}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Review text */}
+                    <div
+                      className="text-gray-700"
+                      style={{ marginBottom: "0.75rem" }}
+                    >
+                      {reviewObj.review}
+                    </div>
+
+                    {/* Scores */}
+                    <div
+                      className="flex flex-wrap gap-1"
+                      style={{ marginBottom: "0.5rem" }}
+                    >
+                      <span
+                        className={`rounded-full text-xs font-medium ${getScoreBadgeColor(
+                          reviewObj.final_score,
+                        )}`}
+                        style={{ padding: "0.25rem 0.5rem" }}
+                      >
+                        Quality: {(reviewObj.final_score * 100).toFixed(0)}%
                       </span>
-                      <span className="text-xs text-gray-400">
-                        {reviewObj.time}
+                      <span
+                        className={`rounded-full text-xs font-medium ${getScoreBadgeColor(
+                          reviewObj.score.sent,
+                        )}`}
+                        style={{ padding: "0.25rem 0.5rem" }}
+                      >
+                        Sentiment: {(reviewObj.score.sent * 100).toFixed(0)}%
+                      </span>
+                      <span
+                        className={`rounded-full text-xs font-medium ${getScoreBadgeColor(
+                          reviewObj.score.eng,
+                        )}`}
+                        style={{ padding: "0.25rem 0.5rem" }}
+                      >
+                        Engagement: {(reviewObj.score.eng * 100).toFixed(0)}%
                       </span>
                     </div>
-                    <div>{reviewObj.review}</div>
                   </div>
                 ))
             ) : (
-              <div>No reviews found.</div>
+              <div
+                className="text-center text-gray-500"
+                style={{ padding: "2rem 0" }}
+              >
+                No reviews found.
+              </div>
             )}
           </div>
         )}
