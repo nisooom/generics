@@ -1,29 +1,27 @@
 from sel_multithread import rank_reviews_by_score
 from fastapi import FastAPI, Request
-from model_test import get_sentiment, fake_check
-import requests
-import time
-from upstash_redis import Redis
-import urllib.parse
-from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import re
 from slowapi.errors import RateLimitExceeded
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
+from pydantic import BaseModel
+
+import urllib.parse
+import requests
+from upstash_redis import Redis
+
+import time
+import re
+
+from model_test import get_sentiment, fake_check
 from similar_items import find_similar_items
 
 
 redis = Redis.from_env()
 
-class NameRequest(BaseModel):
-    name: str
-
 class URLRequest(BaseModel):
     url: str
     
-
 app = FastAPI()
 
 limiter = Limiter(key_func=get_remote_address)
@@ -40,15 +38,8 @@ app.add_middleware(
 
 
 def get_uuid(url):
-
     parsed_url = urllib.parse.urlparse(url)
     return parsed_url.path.strip("/").split("/")[0]
-
-def get_product_url(url):
-    parsed_url = urllib.parse.urlparse(url)
-    split_path = parsed_url.path.strip("/").split("/")
-    review_url = parsed_url.scheme + "://" + parsed_url.netloc + "/" + split_path[0] + "/product-reviews/" + split_path[-1]
-    return review_url
 
 def cache(url, data):
     id = get_uuid(url)
@@ -58,17 +49,13 @@ def cache(url, data):
 def main():
     return {"health": "ok"}
 
-
-@app.post("/say_hello")
-async def say_hello(request: NameRequest):
-    return {"message": f"Hello, {request.name}!"}
-
-
 @app.post("/analyse")
 # @limiter.limit("5/minute")
 async def analyze(request: Request, url: URLRequest):
     url = url.url
     n = 25
+
+    search_param = re.sub(r"-", "+", get_uuid(url))
 
     if res := redis.get(get_uuid(url)):
         return res          
@@ -77,7 +64,7 @@ async def analyze(request: Request, url: URLRequest):
     # print(get_product_url(url))
     start = time.time()
     reviews, num = rank_reviews_by_score(url)
-    similar_items = find_similar_items(get_uuid(url))
+    similar_items = find_similar_items(search_param)
     end = time.time()
 
     list_of_texts = [i["review"] for i in reviews]
@@ -90,13 +77,13 @@ async def analyze(request: Request, url: URLRequest):
     user_sentiment = ""
 
     # Classify user_mean_score into sentiment category
-    if 0 <= user_mean_score < 0.25:
+    if 0 <= user_mean_score < 0.05:
         user_sentiment = "very negative"
-    elif 0.25 <= user_mean_score < 0.45:
+    elif 0.05 <= user_mean_score < 0.15:
         user_sentiment = "negative"
-    elif 0.45 <= user_mean_score < 0.55:
+    elif 0.15 <= user_mean_score < 0.35:
         user_sentiment = "neutral"
-    elif 0.55 <= user_mean_score < 0.75:
+    elif 0.35 <= user_mean_score < 0.75:
         user_sentiment = "positive"
     else:
         user_sentiment = "very positive"
@@ -119,13 +106,11 @@ async def analyze(request: Request, url: URLRequest):
 
     summary = summary["content"]
 
-    summary = re.sub(r'[^a-zA-Z0-9\s]', '', summary)
+    summary = re.sub(r'[^a-zA-Z0-9\s\.]', '', summary)
     summary = re.sub(r'\s+', ' ', summary.strip())
 
 
     print(f"Time taken : {end - start:.2f}")
-
-
 
     data = { 
         "Reviews" : reviews,
@@ -138,13 +123,11 @@ async def analyze(request: Request, url: URLRequest):
         }
     cache(url, data)
 
-    print(data)
-
     return data
-        
+
+
 def get_similar(url: URLRequest):
     return find_similar_items(get_uuid(url))
-
 
 
 def infer_llm(reviews):

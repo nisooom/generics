@@ -17,11 +17,16 @@ def encode_text(text):
         for tk in word_tokenize(text)
     ])
 
-def fake_check(reviews):
+def batch_tensors(reviews):
     batched_tensors = pad_sequence([
         encode_text(text)
         for text in reviews
     ], batch_first=True)
+
+    return batched_tensors
+
+def fake_check(reviews):
+    batched_tensors = batch_tensors(reviews)
 
     check_fake_model.eval()
     with torch.no_grad():
@@ -29,11 +34,8 @@ def fake_check(reviews):
     return output.numpy().tolist()
 
 def get_sentiment(reviews):
-    batched_tensors = pad_sequence([
-        encode_text(text)
-        for text in reviews
-    ], batch_first=True)
-
+    batched_tensors = batch_tensors(reviews)
+    
     sentiment_model.eval()
     with torch.no_grad():
         output = sentiment_model(batched_tensors)

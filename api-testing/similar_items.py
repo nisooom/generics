@@ -6,13 +6,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-# Amazon search URL
-# url = "https://www.amazon.in/s?k=frozen-nuts-premium-mewa-mix-almonds-cashews-kiwi-walnuts-apricots-dates-blueberry-assorted-fruits"
 def find_similar_items(url):
     chrome_options = Options()
-    # chrome_options.add_argument('--headless')  # Run in headless mode
-    # chrome_options.add_argument('--no-sandbox')
-    # chrome_options.add_argument('--disable-dev-shm-usage')
+    # chrome_options.add_argument('--headless')
 
     # Start the WebDriver
     driver = webdriver.Chrome(options=chrome_options)
@@ -57,7 +53,7 @@ def find_similar_items(url):
         print("Price:" , item["price"])
         print("----")
 
+    driver.quit()
     return results
 
     # Close the driver
-    driver.quit()
