@@ -39,7 +39,7 @@ const CircularProgress = ({
 
         {/* Score text in center */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-primary text-xl font-bold">{score}</span>
+          <span className="text-primary text-md font-bold">{score}</span>
         </div>
       </div>
     </div>

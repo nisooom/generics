@@ -1,17 +1,33 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import TestComponent from "../components/TestComponent";
+import TestComponent from "../components/test-component";
 import "../entrypoints/popup/style.css";
-import TestTabSwitcher from "@/components/TestTabSwitcher";
+import TestTabSwitcher from "@/components/test-tab-switcher";
 
 export default defineContentScript({
   matches: ["<all_urls>"],
   main: async () => {
+    // Remove badges immediately on script load
+    function removeFlixcartBadge() {
+      const badges = document.querySelectorAll(
+        'img.LctmNn[src*="fa_9e47c1.png"]',
+      );
+      for (const badge of badges) {
+        badge.remove();
+      }
+    }
+
+    // Remove badges immediately
+    removeFlixcartBadge();
+
     if (document.readyState === "loading") {
       await new Promise((resolve) =>
         document.addEventListener("DOMContentLoaded", resolve),
       );
     }
+
+    // Remove badges again after DOM is ready
+    removeFlixcartBadge();
 
     if (!document.getElementById("tailwind-cdn")) {
       const link = document.createElement("link");
@@ -27,18 +43,13 @@ export default defineContentScript({
       });
     }
 
-    function removeFlixcartBadge() {
-      const badges = document.querySelectorAll(
-        'img.LctmNn[src*="fa_9e47c1.png"]',
-      );
-      for (const badge of badges) {
-        badge.remove();
-      }
-    }
-
+    // Remove badges again after tailwind loads
     removeFlixcartBadge();
 
     const tryReplace = () => {
+      // Remove badges before trying to replace
+      removeFlixcartBadge();
+
       // Try to replace the first target div (keep as is - using TestComponent)
       const targetDiv1 = document.querySelector(".ISksQ2");
       if (targetDiv1) {
@@ -96,10 +107,11 @@ export default defineContentScript({
     }
 
     const observer = new MutationObserver((mutations) => {
+      // Remove badges on every mutation
+      removeFlixcartBadge();
+
       for (const mutation of mutations) {
         if (mutation.type === "childList") {
-          removeFlixcartBadge();
-
           if (tryReplace()) {
             observer.disconnect();
             return;
@@ -113,8 +125,12 @@ export default defineContentScript({
       subtree: true,
     });
 
+    // Set up a continuous badge removal interval for persistent badges
+    const badgeRemovalInterval = setInterval(removeFlixcartBadge, 100);
+
     setTimeout(() => {
       observer.disconnect();
+      clearInterval(badgeRemovalInterval);
     }, 10000);
   },
 });

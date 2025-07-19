@@ -123,3 +123,67 @@ body,
 @body {
   @apply bg-background text-foreground font-sans;
 }
+/* Hide the specific Flipkart badge image */
+img.LctmNn[src*="fa_9e47c1.png"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Broader fallback for any image with that specific src pattern */
+img[src*="fa_9e47c1.png"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Hide parent containers that might only contain the badge */
+.LctmNn:has(img[src*="fa_9e47c1.png"]) {
+  display: none !important;
+}
+
+/* Alternative if :has() is not supported */
+.LctmNn {
+  & img[src*="fa_9e47c1.png"] {
+    display: none !important;
+  }
+}
+
+/* Additional targeting by class name if the image appears elsewhere */
+.LctmNn {
+  display: none !important;
+}
+
+/* Prevent the badge from showing with any loading states */
+img.LctmNn {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Hide any lazy loading placeholders */
+img[data-src*="fa_9e47c1.png"] {
+  display: none !important;
+}
+
+/* Animation override to prevent fade-ins */
+img.LctmNn[src*="fa_9e47c1.png"] {
+  animation: none !important;
+  transition: none !important;
+}
+
+.sRIueJ {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+}
+
+.r2CdBx {
+  display: flex;
+  width: auto;
+}
