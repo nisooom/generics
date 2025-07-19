@@ -22,7 +22,7 @@ class NameRequest(BaseModel):
 
 class URLRequest(BaseModel):
     url: str
-    
+
 
 app = FastAPI()
 
@@ -40,9 +40,9 @@ app.add_middleware(
 
 
 def get_uuid(url):
-
     parsed_url = urllib.parse.urlparse(url)
     return parsed_url.path.strip("/").split("/")[0]
+
 
 def get_product_url(url):
     parsed_url = urllib.parse.urlparse(url)
@@ -50,9 +50,11 @@ def get_product_url(url):
     review_url = parsed_url.scheme + "://" + parsed_url.netloc + "/" + split_path[0] + "/product-reviews/" + split_path[-1]
     return review_url
 
+
 def cache(url, data):
     id = get_uuid(url)
     redis.set(id, data)
+
 
 @app.get("/")
 def main():
@@ -68,21 +70,16 @@ async def say_hello(request: NameRequest):
 # @limiter.limit("5/minute")
 async def analyze(request: Request, url: URLRequest):
     url = url.url
-    n = 25
+    top_n = 25
 
     if res := redis.get(get_uuid(url)):
-        return res          
+        return res
 
-
-    # print(get_product_url(url))
-    start = time.time()
+    total_start_time = time.time()
     reviews, num = rank_reviews_by_score(url)
     similar_items = find_similar_items(get_uuid(url))
-    end = time.time()
 
     list_of_texts = [i["review"] for i in reviews]
-
-    # print(reviews)
 
     # print("LIST OF TEXTX", list_of_texts)
     user_score = [i["score"] for i in reviews]
@@ -101,7 +98,6 @@ async def analyze(request: Request, url: URLRequest):
     else:
         user_sentiment = "very positive"
 
-
     sentiment_time = time.time()
     sentiment_scores = get_sentiment(list_of_texts)
     sentiment_mean_score = sum(sentiment_scores) / len(sentiment_scores)
@@ -109,30 +105,25 @@ async def analyze(request: Request, url: URLRequest):
     print(f"Sentiment Analysis done in {sentiment_end_time - sentiment_time:.2f}")
 
     fake_scores = fake_check(list_of_texts)
-        
     num_fakes = sum([1 for i in fake_scores if i > 0.5]) / len(reviews)
 
     for review, score in zip(reviews, sentiment_scores):
         review["sentiment"] = score
-    
-    summary = infer_llm(reviews=list_of_texts[:n])
 
+    summary = infer_llm(reviews=list_of_texts[:top_n])
     summary = summary["content"]
-
     summary = re.sub(r'[^a-zA-Z0-9\s]', '', summary)
     summary = re.sub(r'\s+', ' ', summary.strip())
 
+    total_stop_time = time.time()
+    print(f"Time taken : {total_stop_time - total_start_time:.2f}")
 
-    print(f"Time taken : {end - start:.2f}")
-
-
-
-    data = { 
+    data = {
         "Reviews" : reviews,
-        "Summary" : summary, 
-        "ReviewsScraped": num,  
-        "SentimentScore" : (round(sentiment_mean_score * 100, 2)), 
-        "UserSentiment": user_sentiment, 
+        "Summary" : summary,
+        "ReviewsScraped": num,
+        "SentimentScore" : (round(sentiment_mean_score * 100, 2)),
+        "UserSentiment": user_sentiment,
         "FakeRatio": num_fakes,
         "RelatedItems": similar_items,
         }
@@ -141,15 +132,14 @@ async def analyze(request: Request, url: URLRequest):
     print(data)
 
     return data
-        
+
+
 def get_similar(url: URLRequest):
     return find_similar_items(get_uuid(url))
 
 
-
 def infer_llm(reviews):
     try:
-
         llm_url = "http://192.168.6.94:11030/completion"
         headers = {
             "Content-Type": "application/json"
