@@ -7,7 +7,10 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 import time
 import json
 import re
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
+from model_test import get_sentiment, fake_check
+
 
 def setup_driver():
     chrome_options = Options()
@@ -49,20 +52,31 @@ def scrape_pages_range(base_url, start_page, end_page, thread_id, max_empty_page
     driver = setup_driver()
     consecutive_empty_pages = 0
     
+    # refreshed_already = defaultdict(bool)
+
     try:
-        
+        # page = start_page
         for page in range(start_page, end_page + 1):
-            
             paged_url = f"{base_url}&page={page}"
             driver.get(paged_url)
             
-            wait = WebDriverWait(driver, 2)
+            wait = WebDriverWait(driver, 3)
             
             # Check if page has reviews
             try:
                 wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.EKFha-")))
+                # page += 1
             except TimeoutException:
+                # print(sum(refreshed_already.values()))
                 # print(f"Thread {thread_id}: No reviews found on page {page}")
+                # if not refreshed_already[page]:
+                #     print('Refreshing', page)
+                #     driver.refresh()
+                #     refreshed_already[page] = True
+                #     consecutive_empty_pages = 0
+                # else:
+                #     page += 1
+                #     consecutive_empty_pages += 1
                 consecutive_empty_pages += 1
                 
                 if consecutive_empty_pages >= max_empty_pages:
@@ -184,7 +198,7 @@ def distribute_pages(total_pages, num_threads=4):
     return page_ranges
 
 
-def scrape_all_reviews_threaded(base_url, num_threads=12, max_empty_pages=2):
+def scrape_all_reviews_threaded(base_url, num_threads=12, max_empty_pages=3):
     # First, get total pages using a single driver
     driver = setup_driver()
     try:
@@ -248,18 +262,22 @@ def rank_reviews_by_score(url, top_n=250, max_votes=10):
             return 0
         return (likes - dislikes) / (likes + dislikes)
 
-    def score_review(review, total_ldr, max_votes=5):
+    def score_review(review, total_ldr, max_votes=10):
         likes, dislikes = int(review["ldr"][0]), int(review["ldr"][1])
         total_votes = likes + dislikes
+        length_score = min(len(review["review"]) / 300, 1.0)  # long reviews rewarded
         if total_votes == 0:
-            return 0
+            return {
+                "ldr": 0,
+                "eng": 0,
+                "len": length_score,
+            }
 
         review_ldr = get_item_ldr(review)
 
         # Component scores
         ldr_alignment = 1 - abs(review_ldr - total_ldr)  # closer is better
         engagement = min(total_votes / max_votes, 1.0)   # normalize
-        length_score = min(len(review["review"]) / 300, 1.0)  # long reviews rewarded
 
         # Composite score with weights
         final_score = (
@@ -267,7 +285,11 @@ def rank_reviews_by_score(url, top_n=250, max_votes=10):
             0.3 * engagement +
             0.2 * length_score
         )
-        return round(final_score, 4)
+        return {
+            'ldr': ldr_alignment,
+            'eng': engagement,
+            'len': length_score,
+        }
 
 
     total_ldr = get_total_ldr(reviews)
@@ -275,9 +297,45 @@ def rank_reviews_by_score(url, top_n=250, max_votes=10):
     for review in reviews:
         review["score"] = score_review(review, total_ldr, max_votes=max_votes)
 
-    reviews_sorted = sorted(reviews, key=lambda r: r["score"], reverse=True)
-    return reviews_sorted[:top_n], num_reviews
+    return reviews, num_reviews
+    # reviews_sorted = sorted(reviews, key=lambda r: r["score"], reverse=True)
+    # return reviews_sorted[:top_n], num_reviews
 
+
+def get_reviews_formatted(url):
+    reviews, num = rank_reviews_by_score(url) # scrape_all_reviews_threaded(i, num_threads=NUM_THREADS, max_empty_pages=1)
+        
+    all_review_texts = [i["review"] for i in reviews]
+    print(all_review_texts)
+
+    all_sentiments = get_sentiment(all_review_texts)
+    all_plag = fake_check(all_review_texts)
+
+    for idx, review in enumerate(reviews):
+        print(review["score"])
+        review["score"]["sent"] = all_sentiments[idx]
+        review["score"]["plag"] = all_plag[idx]
+    
+    grads = {
+        "ldr": 0.0829,
+        "eng": 0.4726,
+        "len": 0.0363,
+        "sent": 0.3277,
+        "plag": 0.4035
+    }
+
+    for review in reviews:
+        score = review["score"]
+        final_score = (
+            grads["ldr"] * score.get("ldr", 0) +
+            grads["eng"] * score.get("eng", 0) +
+            grads["len"] * score.get("len", 0) +
+            grads["sent"] * score.get("sent", 0) +
+            grads["plag"] * score.get("plag", 0)
+        )
+        review["final_score"] = min(final_score, 1.0)
+
+    return reviews, num
 
 if __name__ == "__main__":
 
@@ -287,8 +345,8 @@ if __name__ == "__main__":
         # "https://www.flipkart.com/realme-p3-5g-space-silver-128-gb/product-reviews/itm69060f73d27e8?pid=MOBHAYN5SGFFG88U&lid=LSTMOBHAYN5SGFFG88UIOKMGU&marketplace=FLIPKART",
         # "https://www.flipkart.com/motorola-g45-5g-viva-magenta-128-gb/product-reviews/itmab7651d40eb72?pid=MOBH3YKQMPVFBUB5&lid=LSTMOBH3YKQMPVFBUB5BQUMDM&marketplace=FLIPKART",
         # "https://www.flipkart.com/samsung-galaxy-f06-5g-bahama-blue-128-gb/product-reviews/itm58189fada62cb?pid=MOBH9AS47XHFRMJY&lid=LSTMOBH9AS47XHFRMJYWI8CRI&marketplace=FLIPKART",
-        # "https://www.flipkart.com/frozen-nuts-premium-mewa-mix-almonds-cashews-kiwi-walnuts-apricots-dates-blueberry-assorted-fruits/product-reviews/itmb599a803d76cb?pid=NDFH9GZZKGEQV8YK&lid=LSTNDFH9GZZKGEQV8YK24UYEG&marketplace=FLIPKART",
-        "https://www.flipkart.com/vellosta-men-self-design-casual-black-shirt/product-reviews/itm1d0ab280b3fc9?pid=SHTHCFXAJ5H4EHNG&lid=LSTSHTHCFXAJ5H4EHNGO67UAK&marketplace=FLIPKART",
+        "https://www.flipkart.com/frozen-nuts-premium-mewa-mix-almonds-cashews-kiwi-walnuts-apricots-dates-blueberry-assorted-fruits/product-reviews/itmb599a803d76cb?pid=NDFH9GZZKGEQV8YK&lid=LSTNDFH9GZZKGEQV8YK24UYEG&marketplace=FLIPKART",
+        # "https://www.flipkart.com/vellosta-men-self-design-casual-black-shirt/product-reviews/itm1d0ab280b3fc9?pid=SHTHCFXAJ5H4EHNG&lid=LSTSHTHCFXAJ5H4EHNGO67UAK&marketplace=FLIPKART",
     ]
     
     NUM_THREADS = 6
@@ -302,6 +360,36 @@ if __name__ == "__main__":
         start_time = time.time()
         reviews = rank_reviews_by_score(i) # scrape_all_reviews_threaded(i, num_threads=NUM_THREADS, max_empty_pages=1)
         
+        all_review_texts = [i["review"] for i in reviews]
+        print(all_review_texts)
+
+        all_sentiments = get_sentiment(all_review_texts)
+        all_plag = fake_check(all_review_texts)
+
+        for idx, review in enumerate(reviews):
+            print(review["score"])
+            review["score"]["sent"] = all_sentiments[idx]
+            review["score"]["plag"] = all_plag[idx]
+        
+        grads = {
+            "ldr": 0.0829,
+            "eng": 0.4726,
+            "len": 0.0363,
+            "sent": 0.3277,
+            "plag": 0.4035
+        }
+
+        for review in reviews:
+            score = review["score"]
+            final_score = (
+                grads["ldr"] * score.get("ldr", 0) +
+                grads["eng"] * score.get("eng", 0) +
+                grads["len"] * score.get("len", 0) +
+                grads["sent"] * score.get("sent", 0) +
+                grads["plag"] * score.get("plag", 0)
+            )
+            review["final_score"] = min(final_score, 1.0)
+
         end_time = time.time()
         
         file_name = f"flipkart_detailed_reviews.json"
