@@ -3,7 +3,6 @@ import * as d3 from "d3";
 
 const D3ScatterPlot = ({ reviews }) => {
   const svgRef = useRef();
-  const tooltipRef = useRef();
 
   useEffect(() => {
     if (!reviews || !Array.isArray(reviews) || reviews.length === 0) return;
@@ -26,16 +25,16 @@ const D3ScatterPlot = ({ reviews }) => {
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    // Scales
+    // Scales - Updated to use correct field names
     const xScale = d3
       .scaleLinear()
-      .domain(d3.extent(reviews, (d) => d.score))
+      .domain(d3.extent(reviews, (d) => d.final_score)) // Changed from d.score
       .range([0, width])
       .nice();
 
     const yScale = d3
       .scaleLinear()
-      .domain(d3.extent(reviews, (d) => d.sentiment))
+      .domain(d3.extent(reviews, (d) => d.score.sent)) // Changed from d.sentiment
       .range([height, 0])
       .nice();
 
@@ -97,7 +96,7 @@ const D3ScatterPlot = ({ reviews }) => {
       .style("font-size", "14px")
       .style("font-weight", "600")
       .style("fill", "#374151")
-      .text("Authenticity Score (0=Fake, 1=Genuine)");
+      .text("Final Score (0=Fake, 1=Genuine)");
 
     g.append("text")
       .attr("transform", "rotate(-90)")
@@ -111,10 +110,11 @@ const D3ScatterPlot = ({ reviews }) => {
       .text("Sentiment Score");
 
     // Create tooltip
-    const tooltip = d3
-      .select("body")
-      .append("div")
-      .attr("class", "d3-tooltip")
+    const tooltip = d3.select("body").select(".d3-tooltip").empty()
+      ? d3.select("body").append("div").attr("class", "d3-tooltip")
+      : d3.select("body").select(".d3-tooltip");
+
+    tooltip
       .style("position", "absolute")
       .style("visibility", "hidden")
       .style("background", "rgba(0, 0, 0, 0.8)")
@@ -137,10 +137,10 @@ const D3ScatterPlot = ({ reviews }) => {
         const total = parseInt(d.ldr[1]);
         return sizeScale(total > 0 ? helpful / total : 0);
       })
-      .attr("cx", (d) => xScale(d.score))
-      .attr("cy", (d) => yScale(d.sentiment))
+      .attr("cx", (d) => xScale(d.final_score)) // Changed from d.score
+      .attr("cy", (d) => yScale(d.score.sent)) // Changed from d.sentiment
       .style("fill", (d) => colorScale(d.rating))
-      .style("opacity", (d) => Math.max(0.4, d.score)) // Opacity based on authenticity
+      .style("opacity", (d) => Math.max(0.4, d.final_score)) // Changed from d.score
       .style("stroke", "#fff")
       .style("stroke-width", 1)
       .style("cursor", "pointer");
@@ -163,8 +163,8 @@ const D3ScatterPlot = ({ reviews }) => {
         tooltip.style("visibility", "visible").html(`
             <div><strong>${d.user}</strong></div>
             <div>Rating: ${d.rating} stars</div>
-            <div>Authenticity: ${(d.score * 100).toFixed(1)}%</div>
-            <div>Sentiment: ${(d.sentiment * 100).toFixed(1)}%</div>
+            <div>Final Score: ${(d.final_score * 100).toFixed(1)}%</div>
+            <div>Sentiment: ${(d.score.sent * 100).toFixed(1)}%</div>
             <div>Helpful: ${d.ldr[0]}/${d.ldr[1]} (${(helpfulRatio * 100).toFixed(1)}%)</div>
             <div>Date: ${d.time}</div>
             <div style="max-width: 200px; margin-top: 4px;">
@@ -205,7 +205,7 @@ const D3ScatterPlot = ({ reviews }) => {
 
     // Cleanup function
     return () => {
-      tooltip.remove();
+      // Don't remove tooltip on component unmount to prevent errors
     };
   }, [reviews]);
 
@@ -256,26 +256,26 @@ const D3ScatterPlot = ({ reviews }) => {
           ))}
         </div>
 
-        <div className="space-y-1 text-xs text-gray-600">
+        {/* <div className="space-y-1 text-xs text-gray-600">
           <p>
             • <strong>Circle size:</strong> Helpfulness ratio (larger = more
             helpful votes)
           </p>
           <p>
-            • <strong>Opacity:</strong> Authenticity score (darker = more
-            genuine)
+            • <strong>Opacity:</strong> Final score (darker = higher final
+            score)
           </p>
           <p>
-            • <strong>X-axis:</strong> Review authenticity (0=fake, 1=genuine)
+            • <strong>X-axis:</strong> Final review score (0=low, 1=high)
           </p>
           <p>
-            • <strong>Y-axis:</strong> Sentiment polarity (lower=negative,
+            • <strong>Y-axis:</strong> Sentiment score (lower=negative,
             higher=positive)
           </p>
           <p>
             • <strong>Hover:</strong> View detailed review information
           </p>
-        </div>
+        </div> */}
       </div>
     </div>
   );
