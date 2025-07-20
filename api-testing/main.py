@@ -1,4 +1,3 @@
-from sel_multithread import rank_reviews_by_score
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
@@ -15,6 +14,7 @@ import re
 
 from model_test import get_sentiment, fake_check
 from similar_items import find_similar_items
+from sel_multithread import get_reviews_formatted, rank_reviews_by_score
 
 import os
 import google.generativeai as genai
@@ -68,14 +68,14 @@ async def analyze(request: Request, url: URLRequest):
         return res
 
     total_start_time = time.time()
-    reviews, num = rank_reviews_by_score(url)
+    reviews, num = get_reviews_formatted(url)
     similar_items = find_similar_items(search_param)
     end = time.time()
 
     list_of_texts = [i["review"] for i in reviews]
 
     # print("LIST OF TEXTX", list_of_texts)
-    user_score = [i["score"] for i in reviews]
+    user_score = [i["final_score"] for i in reviews]
     user_mean_score = sum(user_score) / len(user_score)
     user_sentiment = ""
 
@@ -118,9 +118,9 @@ async def analyze(request: Request, url: URLRequest):
         "Reviews" : reviews,
         "Summary" : summary,
         "ReviewsScraped": num,
-        "SentimentScore" : (round(sentiment_mean_score * 100, 2)),
+        "SentimentScore" : (round(sentiment_mean_score * 100)),
         "UserSentiment": user_sentiment,
-        "FakeRatio": num_fakes,
+        "FakeRatio": round(num_fakes * 100),
         "RelatedItems": similar_items,
         }
     cache(url, data)

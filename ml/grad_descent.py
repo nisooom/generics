@@ -1,14 +1,14 @@
 import numpy as np
+import json
+import os
 
 # Attribute names
 attributes = [
-    "user_review", 
-    "liketodislike_ratio", 
-    "engagement", 
-    "len_score", 
-    "isCertified", 
-    "SentimentScore", 
-    "AI_Plag_score"
+    "ldr",
+    "eng",
+    "len",
+    "sent",
+    "plag",
 ]
 
 # Initialize weights randomly
@@ -17,8 +17,23 @@ weights = np.random.rand(len(attributes))
 # Learning rate
 learning_rate = 0.01
 
+# Load sample data from JSON file
+json_path = os.path.join(os.path.dirname(__file__), "../api-testing/flipkart_detailed_reviews.json")
+with open(json_path, "r") as f:
+    raw_data = json.load(f)
+
+# Convert JSON data to sample_data list of dicts with required attributes
+
+
+print(raw_data)
+
 sample_data = []
+
+for i in raw_data:
+    sample_data.append(i["score"])
 # Example input data
+
+print(sample_data)
 
 
 def compute_score(features, weights):
@@ -75,6 +90,6 @@ def train(weights, data, learning_rate):
 # Run training
 final_weights = train(weights, sample_data, learning_rate)
 
-print("\n✅ Final weights after manual training and normalization:")
+# print("\n✅ Final weights after manual training and normalization:")
 for attr, weight in zip(attributes, final_weights):
     print(f"{attr}: {weight:.4f}")
