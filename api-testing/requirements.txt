@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+slowapi
+pydantic
+requests
+upstash-redis
+google-generativeai 

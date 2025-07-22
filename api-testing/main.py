@@ -16,6 +16,11 @@ from model_test import get_sentiment, fake_check
 from similar_items import find_similar_items
 from sel_multithread import get_reviews_formatted, rank_reviews_by_score
 
+import os
+import google.generativeai as genai
+from dotenv import load_dotenv
+load_dotenv()
+
 
 redis = Redis.from_env()
 
@@ -129,20 +134,18 @@ def get_similar(url: URLRequest):
 
 def infer_llm(reviews):
     try:
-        llm_url = "http://192.168.6.94:11030/completion"
-        headers = {
-            "Content-Type": "application/json"
-        }
-
-        data = {
-            "prompt": f"""
-    You are given a list of user reviews. Read them all carefully and generate a concise, balanced summary that captures the overall sentiment, common themes, notable pros and cons, and any frequently mentioned issues or praises. Use clear language and aim to reflect the general consensus as well as any strong outliers DO NOT USE POINTS.
-    Reviews GIVE ME A 150 WORD REVIEW: {reviews}
-    """,
-            "n_predict": 256
-        }
-
-        response = requests.post(llm_url, headers=headers, json=data)
-        return response.json()
-    except:
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        prompt = (
+            "You are given a list of user reviews. Read them all carefully and generate a concise, balanced summary that captures the overall sentiment, common themes, notable pros and cons, and any frequently mentioned issues or praises. Use clear language and aim to reflect the general consensus as well as any strong outliers. DO NOT USE POINTS. "
+            "GIVE ME A 150 WORD REVIEW: " + str(reviews)
+        )
+        response = model.generate_content(prompt)
+        return {"content": response.text}
+    except Exception as e:
+        print(f"Gemini API error: {e}")
         return {"content": ""}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
