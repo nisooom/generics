@@ -44,7 +44,8 @@ def get_total_pages(driver):
                 span = page_div.find_element(By.TAG_NAME, "span")
                 if "Page" in span.text and "of" in span.text:
                     return int(span.text.strip().split()[-1])
-            except:
+            except Exception as e:
+                print(e)
                 continue
         return 1
     except TimeoutException:
@@ -413,4 +414,3 @@ if __name__ == "__main__":
     m_end = time.time()
 
     print(f"Scraped {total_reviews} and {cnt} Pages in {m_end - m_start:.2f}s.")
-
