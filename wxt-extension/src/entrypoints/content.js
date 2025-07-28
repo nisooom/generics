@@ -1,8 +1,8 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import TestComponent from "../components/test-component";
+import TestComponent from "../components/header-component";
 import "../entrypoints/popup/style.css";
-import TestTabSwitcher from "@/components/test-tab-switcher";
+import TestTabSwitcher from "@/components/tab-switcher";
 
 export default defineContentScript({
   matches: ["<all_urls>"],

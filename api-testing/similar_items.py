@@ -8,7 +8,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 def find_similar_items(url):
     chrome_options = Options()
-    # chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--headless')
 
     # Start the WebDriver
     driver = webdriver.Chrome(options=chrome_options)

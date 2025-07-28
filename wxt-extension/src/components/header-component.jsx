@@ -250,7 +250,7 @@ export default function TestComponent({
                   borderRadius: "0.25rem",
                 }}
               >
-                {apiData.FakeRatio * 100}% AI review possibility
+                {apiData.FakeRatio}% AI review possibility
               </p>
             )}
           </div>
